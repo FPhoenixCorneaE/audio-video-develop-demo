@@ -1,8 +1,8 @@
 # 音频的录制和播放
 
-* 使用 **AudioRecord** 录制 PCM（录音）
-* 生成 wav 格式的音频并使用 MediaPlayer 播放
-* 使用 **AudioTrack** 播放 PCM 格式音频（Stream 和 Static 模式）
+1. 使用 **AudioRecord** 录制 PCM（录音）
+2. 生成 wav 格式的音频并使用 MediaPlayer 播放
+3. 使用 **AudioTrack** 播放 PCM 格式音频（Stream 和 Static 模式）
 
 ### 一、声音是怎么被保存起来的？
 

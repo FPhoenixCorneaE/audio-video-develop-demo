@@ -362,56 +362,59 @@ class MainActivity : ComponentActivity() {
      * 播放PCM音频（Static模式）
      */
     private fun playPcmStatic() {
-        runCatching {
-            // 声道
-            val channel = AudioFormat.CHANNEL_IN_STEREO
-            // 采样位数
-            val encoding = AudioFormat.ENCODING_PCM_16BIT
-            // 设置音频信息属性
-            val audioAttrs = AudioAttributes.Builder()
-                // 设置支持多媒体属性
-                .setUsage(AudioAttributes.USAGE_MEDIA)
+        audioTrackJob?.cancel()
+        audioTrackJob = lifecycleScope.launch(Dispatchers.IO) {
+            runCatching {
+                // 声道
+                val channel = AudioFormat.CHANNEL_IN_STEREO
+                // 采样位数
+                val encoding = AudioFormat.ENCODING_PCM_16BIT
+                // 设置音频信息属性
+                val audioAttrs = AudioAttributes.Builder()
+                    // 设置支持多媒体属性
+                    .setUsage(AudioAttributes.USAGE_MEDIA)
+                    // 设置音频格式
+                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                    .build()
                 // 设置音频格式
-                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                .build()
-            // 设置音频格式
-            val audioFormat = AudioFormat.Builder()
-                // 设置采样率
-                .setSampleRate(AUDIO_SAMPLE_RATE)
-                // 设置采样位数
-                .setEncoding(encoding)
-                // 设置声道
-                .setChannelMask(channel)
-                .build()
-            val pcmFile = File(AUDIO_SAVE_PATH, "testAudio.pcm")
-            if (pcmFile.exists()) {
-                FileInputStream(pcmFile).use {
-                    ByteArrayOutputStream().use { baos ->
-                        val buffer = ByteArray(1024)
-                        var len: Int
-                        while (it.read(buffer).also { len = it } > 0) {
-                            baos.write(buffer, 0, len)
+                val audioFormat = AudioFormat.Builder()
+                    // 设置采样率
+                    .setSampleRate(AUDIO_SAMPLE_RATE)
+                    // 设置采样位数
+                    .setEncoding(encoding)
+                    // 设置声道
+                    .setChannelMask(channel)
+                    .build()
+                val pcmFile = File(AUDIO_SAVE_PATH, "testAudio.pcm")
+                if (pcmFile.exists()) {
+                    FileInputStream(pcmFile).use {
+                        ByteArrayOutputStream().use { baos ->
+                            val buffer = ByteArray(1024)
+                            var len: Int
+                            while (it.read(buffer).also { len = it } > 0) {
+                                baos.write(buffer, 0, len)
+                            }
+                            // 拿到音频数据
+                            val audioBytes = baos.toByteArray()
+                            // 创建 AudioTrack
+                            val audioTrack = AudioTrack(
+                                /* attributes = */ audioAttrs,
+                                /* format = */ audioFormat,
+                                // 使用音频大小
+                                /* bufferSizeInBytes = */ audioBytes.size,
+                                /* mode = */ AudioTrack.MODE_STREAM,
+                                /* sessionId = */ AudioManager.AUDIO_SESSION_ID_GENERATE
+                            )
+                            // 一次性写入
+                            audioTrack.write(audioBytes, 0, audioBytes.size)
+                            // 开始播放
+                            audioTrack.play()
                         }
-                        // 拿到音频数据
-                        val audioBytes = baos.toByteArray()
-                        // 创建 AudioTrack
-                        val audioTrack = AudioTrack(
-                            /* attributes = */ audioAttrs,
-                            /* format = */ audioFormat,
-                            // 使用音频大小
-                            /* bufferSizeInBytes = */ audioBytes.size,
-                            /* mode = */ AudioTrack.MODE_STREAM,
-                            /* sessionId = */ AudioManager.AUDIO_SESSION_ID_GENERATE
-                        )
-                        // 一次性写入
-                        audioTrack.write(audioBytes, 0, audioBytes.size)
-                        // 开始播放
-                        audioTrack.play()
                     }
                 }
+            }.onFailure {
+                it.printStackTrace()
             }
-        }.onFailure {
-            it.printStackTrace()
         }
     }
 
