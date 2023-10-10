@@ -180,6 +180,7 @@ class MainActivity : ComponentActivity() {
                     imageFile.createNewFile()
                     FileOutputStream(imageFile).use {
                         bitmap.compress(Bitmap.CompressFormat.JPEG, 100, it)
+                        it.flush()
                         withContext(Dispatchers.Main) {
                             Toast.makeText(this@MainActivity, "图片保存成功", Toast.LENGTH_SHORT).show()
                         }

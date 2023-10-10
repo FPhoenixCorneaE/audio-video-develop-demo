@@ -38,7 +38,7 @@ object Camera2Manager : SurfaceTextureListener, OnImageAvailableListener, Camera
     private var mCameraCaptureSession: CameraCaptureSession? = null
     private var mActivity: WeakReference<Activity>? = null
     private var mSurfaceTexture: SurfaceTexture? = null
-    private var mOnImageAvailable: ((bitmap:Bitmap?) -> Unit)? = null
+    private var mOnImageAvailable: ((bitmap: Bitmap?) -> Unit)? = null
 
     /**
      * 初始化相机
@@ -107,7 +107,12 @@ object Camera2Manager : SurfaceTextureListener, OnImageAvailableListener, Camera
             return@Comparator sign(o1.width * o1.height.toDouble() - o2.width * o2.height.toDouble()).toInt()
         })
         // 设置 ImageReader 配置大小，且最大 Image 为 1，因为是 JPEG
-        mImageReader = ImageReader.newInstance(largest.width, largest.height, ImageFormat.JPEG, 1)
+        mImageReader = ImageReader.newInstance(
+            /* width = */ largest.width,
+            /* height = */ largest.height,
+            /* format = */ ImageFormat.JPEG,
+            /* maxImages = */ 1,
+        )
         // 拍照监听
         mImageReader?.setOnImageAvailableListener(this, null)
 
@@ -175,7 +180,11 @@ object Camera2Manager : SurfaceTextureListener, OnImageAvailableListener, Camera
                             // 创建 CaptureRequest
                             val build = captureBuilder.build()
                             // 设置预览时连续捕获图片数据
-                            session.setRepeatingRequest(build, null, null)
+                            session.setRepeatingRequest(
+                                /* request = */ build,
+                                /* listener = */ null,
+                                /* handler = */ null,
+                            )
                         }.onFailure {
                             it.printStackTrace()
                         }
@@ -195,7 +204,7 @@ object Camera2Manager : SurfaceTextureListener, OnImageAvailableListener, Camera
     /**
      * 拍照
      */
-    fun takePicture(onImageAvailable: (bitmap:Bitmap?) -> Unit) {
+    fun takePicture(onImageAvailable: (bitmap: Bitmap?) -> Unit) {
         mOnImageAvailable = onImageAvailable
         // 创建一个拍照的 session
         val captureRequest = mCameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
@@ -338,24 +347,28 @@ object Camera2Manager : SurfaceTextureListener, OnImageAvailableListener, Camera
     }
 
     override fun onImageAvailable(reader: ImageReader?) {
-        // 获取捕获的照片数据
-        val image = mImageReader?.acquireLatestImage()
-        // 拿到所有的 Plane 数组
-        val planes = image!!.planes
-        // 由于是 JPEG ，只需要获取下标为 0 的数据即可
-        val buffer = planes[0].buffer
-        val data = ByteArray(buffer.remaining())
-        // 把 bytebuffer 的数据给 byte数组
-        buffer.get(data)
-        var bitmap = BitmapFactory.decodeByteArray(data, 0, data.size)
-        // 旋转图片
-        if (mCurrentCameraId == mFrontCameraId) {
-            bitmap = bitmap.rotate(270f)
-            bitmap = bitmap.mirror()
-        } else {
-            bitmap = bitmap.rotate(90f)
+        reader?.let {
+            // 获取捕获的照片数据
+            val image = it.acquireLatestImage()
+            // 拿到所有的 Plane 数组
+            val planes = image.planes
+            // 由于是 JPEG ，只需要获取下标为 0 的数据即可
+            val buffer = planes[0].buffer
+            val data = ByteArray(buffer.remaining())
+            // 把 bytebuffer 的数据给 byte数组
+            buffer.get(data)
+            var bitmap = BitmapFactory.decodeByteArray(data, 0, data.size)
+            // 旋转图片
+            if (mCurrentCameraId == mFrontCameraId) {
+                bitmap = bitmap.rotate(270f)
+                bitmap = bitmap.mirror()
+            } else {
+                bitmap = bitmap.rotate(90f)
+            }
+            mOnImageAvailable?.invoke(bitmap)
+            // 记得关闭 image
+            image.close()
         }
-        mOnImageAvailable?.invoke(bitmap)
     }
 
     override fun onOpened(camera: CameraDevice) {
