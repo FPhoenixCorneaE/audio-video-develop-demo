@@ -61,6 +61,7 @@ object Camera1Manager : SurfaceHolder.Callback {
      * 切换摄像头
      */
     fun toggleCamera(activity: Activity) {
+        closeCamera()
         val cameraId = if (mCurrentCameraId == mFrontCameraId) mBackCameraId else mFrontCameraId
         // 根据 cameraId 打开不同摄像头,注意，Camera1只有打开摄像头之后，才能拿到那些配置数据
         mCamera = Camera.open(cameraId)
@@ -85,7 +86,7 @@ object Camera1Manager : SurfaceHolder.Callback {
     fun takePicture(onPictureTaken: (data: ByteArray?, facing: Int) -> Unit) {
         val camera = mCamera
         camera?.takePicture(
-            /* shutter = */ {  },
+            /* shutter = */ { },
             /* raw = */ null,
             /* postview = */ null,
         )
@@ -228,7 +229,7 @@ object Camera1Manager : SurfaceHolder.Callback {
         var targetSiz2: Camera.Size? = null
         for (element in localSizes) {
             val size: Camera.Size = element
-            if (biggestSize == null || size.width >= biggestSize.width && size.height >= biggestSize.height) {
+            if (biggestSize == null || (size.width >= biggestSize.width && size.height >= biggestSize.height)) {
                 biggestSize = size
             }
             when {

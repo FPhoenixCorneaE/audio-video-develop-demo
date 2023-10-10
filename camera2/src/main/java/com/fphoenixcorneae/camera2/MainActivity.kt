@@ -1,16 +1,13 @@
-package com.fphoenixcorneae.camera1
+package com.fphoenixcorneae.camera2
 
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.hardware.Camera
 import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
 import android.util.Log
-import android.view.SurfaceHolder
-import android.view.SurfaceView
+import android.view.TextureView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -41,7 +38,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.lifecycleScope
-import com.fphoenixcorneae.camera1.ui.theme.AudioVideoDevelopDemoTheme
+import com.fphoenixcorneae.camera2.ui.theme.AudioVideoDevelopDemoTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -51,7 +48,7 @@ import java.io.FileOutputStream
 class MainActivity : ComponentActivity() {
 
     companion object {
-        private val IMAGE_PATH = Environment.getExternalStorageDirectory().absolutePath + "/Camera1"
+        private val IMAGE_PATH = Environment.getExternalStorageDirectory().absolutePath + "/Camera2"
 
         /** 相机权限 */
         private val CAMERA_PERMISSIONS = arrayOf(
@@ -68,17 +65,16 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            var surfaceView: SurfaceView? = null
+            var textureView: TextureView? = null
             AudioVideoDevelopDemoTheme {
                 // A surface container using the 'background' color from the theme
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
                         AndroidView(
                             factory = {
-                                SurfaceView(it).apply {
-                                    holder.addCallback(Camera1Manager)
-                                    holder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS)
-                                    surfaceView = this
+                                TextureView(it).apply {
+                                    surfaceTextureListener = Camera2Manager
+                                    textureView = this
                                 }
                             },
                             modifier = Modifier
@@ -95,11 +91,8 @@ class MainActivity : ComponentActivity() {
                                 onClick = {
                                     // 切换摄像头
                                     if (checkPermissionsGranted(CAMERA_PERMISSIONS)) {
-                                        Camera1Manager.toggleCamera(activity = this@MainActivity)
-                                        surfaceView?.let {
-                                            if (it.width > 0) {
-                                                Camera1Manager.startPreview(it.holder, it.width, it.height)
-                                            }
+                                        textureView?.surfaceTexture?.let {
+                                            Camera2Manager.toggleCamera(it)
                                         }
                                     }
                                 },
@@ -119,8 +112,8 @@ class MainActivity : ComponentActivity() {
                                         requestPermissions(STORAGE_PERMISSIONS)
                                         return@Button
                                     }
-                                    Camera1Manager.takePicture { data, facing ->
-                                        savePicture(data, facing)
+                                    Camera2Manager.takePicture { bitmap ->
+                                        savePicture(bitmap)
                                     }
                                 },
                                 contentPadding = PaddingValues(horizontal = 8.dp),
@@ -140,21 +133,18 @@ class MainActivity : ComponentActivity() {
             DisposableEffect(key1 = lifecycleOwner) {
                 val observer = LifecycleEventObserver { _, event ->
                     when (event) {
-                        Lifecycle.Event.ON_CREATE -> Camera1Manager.initCamera()
+                        Lifecycle.Event.ON_CREATE -> Camera2Manager.initCamera(this@MainActivity)
 
                         Lifecycle.Event.ON_START -> {}
                         Lifecycle.Event.ON_RESUME -> {
                             if (checkPermissionsGranted(CAMERA_PERMISSIONS)) {
-                                Camera1Manager.openCamera(activity = this@MainActivity)
-                                surfaceView?.let {
-                                    if (it.width > 0) {
-                                        Camera1Manager.startPreview(it.holder, it.width, it.height)
-                                    }
+                                textureView?.surfaceTexture?.let {
+                                    Camera2Manager.openCamera(it)
                                 }
                             }
                         }
 
-                        Lifecycle.Event.ON_PAUSE -> Camera1Manager.closeCamera()
+                        Lifecycle.Event.ON_PAUSE -> Camera2Manager.closeCamera()
                         Lifecycle.Event.ON_STOP -> {}
                         Lifecycle.Event.ON_DESTROY -> {}
                         Lifecycle.Event.ON_ANY -> {}
@@ -175,18 +165,10 @@ class MainActivity : ComponentActivity() {
     /**
      * 拍照保存图片
      */
-    private fun savePicture(data: ByteArray?, facing: Int) {
+    private fun savePicture(bitmap: Bitmap?) {
         runCatching {
             lifecycleScope.launch(Dispatchers.IO) {
-                data?.let {
-                    var bitmap = BitmapFactory.decodeByteArray(data, 0, data.size)
-                    // 调整方向
-                    if (facing == Camera.CameraInfo.CAMERA_FACING_BACK) {
-                        bitmap = bitmap.rotate(90f)
-                    } else {
-                        bitmap = bitmap.rotate(270f)
-                        bitmap = bitmap.mirror()
-                    }
+                bitmap?.let {
                     val imageDir = File(IMAGE_PATH)
                     if (!imageDir.exists()) {
                         imageDir.mkdirs()
