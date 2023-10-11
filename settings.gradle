@@ -16,3 +16,4 @@ rootProject.name = "audio-video-develop-demo"
 include ':audio'
 include ':camera1'
 include ':camera2'
+include ':cameraX'

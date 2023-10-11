@@ -11,13 +11,13 @@ import android.view.SurfaceHolder
 import java.lang.ref.WeakReference
 
 object Camera1Manager : SurfaceHolder.Callback {
-    var mFrontCameraId = -1
-    var mFrontCameraInfo: Camera.CameraInfo? = null
-    var mBackCameraId = -1
-    var mBackCameraInfo: Camera.CameraInfo? = null
-    var mCamera: Camera? = null
-    var mCurrentCameraId = -1
-    var mActivity: WeakReference<Activity>? = null
+    private var mFrontCameraId = -1
+    private var mFrontCameraInfo: Camera.CameraInfo? = null
+    private var mBackCameraId = -1
+    private var mBackCameraInfo: Camera.CameraInfo? = null
+    private var mCamera: Camera? = null
+    private var mCurrentCameraId = -1
+    private var mActivity: WeakReference<Activity>? = null
 
     /**
      * 初始化相机
@@ -219,7 +219,7 @@ object Camera1Manager : SurfaceHolder.Callback {
     /**
      * 获取预览最好尺寸
      */
-    fun getBestPreviewSize(localSizes: List<Camera.Size>): Camera.Size {
+    private fun getBestPreviewSize(localSizes: List<Camera.Size>): Camera.Size {
         var biggestSize: Camera.Size? = null
         // 优先选屏幕分辨率
         var fitSize: Camera.Size? = null
@@ -266,7 +266,7 @@ object Camera1Manager : SurfaceHolder.Callback {
     /**
      * 输出的照片为最高像素
      */
-    fun getBestPictureSize(localSizes: List<Camera.Size>, previewSize: Camera.Size?): Camera.Size {
+    private fun getBestPictureSize(localSizes: List<Camera.Size>, previewSize: Camera.Size?): Camera.Size {
         var biggestSize: Camera.Size? = null
         // 优先选预览界面的尺寸
         var fitSize: Camera.Size? = null

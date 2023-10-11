@@ -185,14 +185,14 @@ class MainActivity : ComponentActivity() {
                             Toast.makeText(this@MainActivity, "图片保存成功", Toast.LENGTH_SHORT).show()
                         }
                         galleryAddPic(imageFile.absolutePath)
-                        Log.i("Camera1", "savePicture: 图片保存成功")
+                        Log.i("Camera2", "savePicture: 图片保存成功")
                     }
                 }
             }
         }.onFailure {
             it.printStackTrace()
             Toast.makeText(this@MainActivity, "图片保存失败", Toast.LENGTH_SHORT).show()
-            Log.i("Camera1", "savePicture: 图片保存失败")
+            Log.i("Camera2", "savePicture: 图片保存失败")
         }
     }
 
@@ -207,7 +207,7 @@ class MainActivity : ComponentActivity() {
     private fun requestPermissions(permissions: Array<String>) {
         permissions.forEach {
             if (ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(this, CAMERA_PERMISSIONS, 100)
+                ActivityCompat.requestPermissions(this, permissions, 100)
             }
         }
     }
