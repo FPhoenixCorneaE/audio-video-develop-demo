@@ -9,6 +9,8 @@
 [Android 音视频开发(三) -- Camera2 实现预览、拍照功能](/camera2/README.md)
 <br>
 [Android 音视频开发(四) -- CameraX 实现预览、拍照功能](/cameraX/README.md)
+<br>
+[Android 音视频开发(五) -- 音视频分离与合成](/mediaExtractMux/README.md)
 
 ### 四、WebRTC
 
