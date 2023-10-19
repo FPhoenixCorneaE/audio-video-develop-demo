@@ -77,11 +77,11 @@ videoCapturer?.initialize(surfaceTextureHelper, context.applicationContext, vide
 videoCapturer?.startCapture(surfaceViewRenderer.width, surfaceViewRenderer.height, 30)
 ```
 
-> 对于音频来说，在创建 AudioSource 的时候，就开始捕获设备音频数据了。对于视频流说来， WebRTC 定义了 VideoCaturer
-> 抽象接口，并实现了三种实现： ScreenCapturerAndroid、CameraCapturer和FileVideoCapturer，分别为从录屏、摄像头及文件中获取视频流，调用
-> startCapture() 后将开始获取数据。
-> 因为我们用到相机，所以是 CamreaCapturer ，它有两个子类，Camera1Enumerator 和 Camera2Enumerator ，这里使用
-> Camera1Enumerator。
+> 对于音频来说，在创建 `AudioSource` 的时候，就开始捕获设备音频数据了。对于视频流说来， WebRTC 定义了 `VideoCaturer`
+> 抽象接口，并提供了三种实现： `ScreenCapturerAndroid`、`CameraCapturer` 和 `FileVideoCapturer`，分别为从录屏、摄像头及文件中获取视频流，调用
+> `startCapture()` 后将开始获取数据。
+> 因为我们用到相机，所以是 `CamreaCapturer` ，它有两个子类，`Camera1Enumerator` 和 `Camera2Enumerator` ，这里使用
+> `Camera1Enumerator`。
 
 ```kotlin
 private fun createCameraCapturer(): VideoCapturer? {
@@ -132,8 +132,10 @@ val videoTrack = peerConnectionFactory.createVideoTrack(AUDIO_TRACK_ID, videoSou
 videoTrack.addSink(surfaceViewRenderer)
 ```
 
-<br/>
+<br>
 
 [WebRTC 中文社区](https://webrtc.org.cn/)
+<br>
 [webrtc.github.io](https://webrtc.github.io/webrtc-org/native-code/android/)
+<br>
 [与WebRTC实时通信](https://codelabs.developers.google.com/codelabs/webrtc-web/#0)
