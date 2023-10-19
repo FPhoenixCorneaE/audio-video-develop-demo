@@ -138,4 +138,4 @@ videoTrack.addSink(surfaceViewRenderer)
 <br>
 [webrtc.github.io](https://webrtc.github.io/webrtc-org/native-code/android/)
 <br>
-[与WebRTC实时通信](https://codelabs.developers.google.com/codelabs/webrtc-web/#0)
+[Codelab: Real time communication with WebRTC](https://codelabs.developers.google.com/codelabs/webrtc-web/#0)
