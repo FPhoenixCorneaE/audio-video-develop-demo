@@ -42,6 +42,7 @@ object MediaProjectionHelper {
         // 参数2：默认图像的高度像素
         // 参数3：图像的像素格式
         // 参数4：用户想要读图像的最大数量
+        // 需要注意的是，Camera 获取的是 YUV 数据，而MediaProjection 获取的则是 RGBA 的数据
         mImageReader = ImageReader.newInstance(
             /* width = */ displayMetrics.widthPixels,
             /* height = */ displayMetrics.heightPixels,

@@ -127,7 +127,7 @@ Android 截图在这里分为三类：
 > 主要的 API 如下：
 >
 > * **void setDrawingCacheEnabled(boolean flag)**: 开启或关闭 View 的 Cache，设置为 false 后，系统也会自动把原来的 Cache
->   > 销毁。
+    >   > 销毁。
 > * **void buildDrawingCache()**: 创建 Cache，可不调用。
 > * **Bitmap getDrawingCache()**: 获取 View 的 Cache 图片。
 > * **void destroyDrawingCache()**: 销毁 Cache 。若想更新 Cache,必须要调用该方法把旧的 Cache 销毁，才能建立新的。
@@ -211,6 +211,7 @@ val displayMetrics = context.applicationContext.resources.displayMetrics
 // 参数2：默认图像的高度像素
 // 参数3：图像的像素格式
 // 参数4：用户想要读图像的最大数量
+// 需要注意的是，Camera 获取的是 YUV 数据，而MediaProjection 获取的则是 RGBA 的数据
 mImageReader = ImageReader.newInstance(
     /* width = */ displayMetrics.widthPixels,
     /* height = */ displayMetrics.heightPixels,
@@ -231,7 +232,7 @@ mImageReader = ImageReader.newInstance(
 > * **getImageFormat()**: 图像格式
 > * **close()**: 释放与此ImageReader相关的所有资源。用完记得关
 > * **setOnImageAvailableListener(OnImageAvailableListener listener, Handler handler)**:
->   > 注册一个监听器，当ImageReader有一个新的Image变得可用时候调用。
+    >   > 注册一个监听器，当ImageReader有一个新的Image变得可用时候调用。
 
 * 3.5. **通过 `MediaProjection` 创建 `VirtualDisplay` 对象，把内容渲染给 `ImageReader` 的 `Surface` 控件**
 
@@ -368,6 +369,8 @@ start()
 7. **停止录制**
 
 ```kotlin
+mMediaProjection?.stop()
+mMediaProjection = null
 runCatching {
     mMediaRecorder?.stop()
     mMediaRecorder?.reset()
@@ -376,4 +379,6 @@ runCatching {
 }.onFailure {
     it.printStackTrace()
 }
+mVirtualDisplay?.release()
+mVirtualDisplay = null
 ```
