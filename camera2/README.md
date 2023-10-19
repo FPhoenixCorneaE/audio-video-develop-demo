@@ -403,6 +403,12 @@ fun takePicture(onImageAvailable: (bitmap: Bitmap?) -> Unit) {
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" tools:ignore="ScopedStorage" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" tools:ignore="ScopedStorage" />
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" tools:ignore="ScopedStorage" />
+    <application android:requestLegacyExternalStorage="true">
+        <provider android:name="androidx.core.content.FileProvider" android:authorities="${applicationId}.FileProvider"
+            android:exported="false" android:grantUriPermissions="true" tools:replace="android:authorities">
+            <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
+        </provider>
+    </application>
 </manifest>
 ```
 

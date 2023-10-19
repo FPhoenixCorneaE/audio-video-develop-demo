@@ -165,6 +165,23 @@ fun toggleCamera(context: Context, lifecycleOwner: LifecycleOwner, surfaceProvid
 
 > 使用 `mImageCapture?.takePicture()` 方法即可。
 
+* **保存图片，先申请权限**
+
+```xml
+
+<manifest>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" tools:ignore="ScopedStorage" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" tools:ignore="ScopedStorage" />
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" tools:ignore="ScopedStorage" />
+    <application android:requestLegacyExternalStorage="true">
+        <provider android:name="androidx.core.content.FileProvider" android:authorities="${applicationId}.FileProvider"
+            android:exported="false" android:grantUriPermissions="true" tools:replace="android:authorities">
+            <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
+        </provider>
+    </application>
+</manifest>
+```
+
 ```kotlin
 /**
  * 拍照
