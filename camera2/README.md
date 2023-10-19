@@ -32,7 +32,7 @@ Camera2 废弃了 Camera1 的框架，它支持更多功能，比如：
 的底层，它会被放入到一个被叫做 In-Flight Capture Queue 的队列中，当 In-Flight Capture Queue 队列空闲时，我们就可以从它拿到不同的图片数据给到
 Surface ，且能拿到 CaptureResult 这个返回结果信息。
 
-* Supported Hardware Level
+* **Supported Hardware Level**
 
 > Camera2 支持了很多新功能的特性，但这也要看你的手机厂商的支持程度，Camera2 使用 Supported Hardware Level 来判断你的手机是否支持
 > Camera2 的特性，它分为5个 Level：
