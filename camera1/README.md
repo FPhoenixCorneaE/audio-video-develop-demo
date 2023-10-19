@@ -14,7 +14,7 @@ Camera 开发主要用到 **Camera** 类和 **SurfaceView/TextureView** 类，�
 
 两者关系如下：
 
-Camera（底层硬件）-------------->SurfaceView（显示效果）
+Camera（底层硬件）-------------->SurfaceView（显示效果）<br>
 （相当于电脑主机） -------------->    （相当于显示器）
 
 ### 一、相机的开启与预览
