@@ -111,16 +111,22 @@ Box(
         .pointerInput(isPressed) {
             awaitPointerEventScope {
                 if (isPressed) {
+                    // 手指抬起
                     waitForUpOrCancellation()
-                    Log.i(TAG, "onCreate: 手指抬起")
+                    Log.i(TAG, "手指抬起")
                     isPressed = false
-                    audioRecordJob?.cancel()
-                    audioRecordJob = null
+                    AudioManager.stopRecord()
                 } else {
+                    // 手指按下
                     awaitFirstDown()
-                    Log.i(TAG, "onCreate: 手指按下")
+                    Log.i(TAG, "手指按下")
                     isPressed = true
-                    startRecord()
+                    AudioManager.startRecord(
+                        lifecycleScope,
+                        AUDIO_SAVE_PATH,
+                        PCM_FILE_NAME,
+                        WAV_FILE_NAME
+                    )
                 }
             }
         }, contentAlignment = Alignment.Center
@@ -138,20 +144,24 @@ Box(
 
 ```kotlin
 /**
- * 开始录制
+ * 开始录音
  */
-private fun startRecord() {
-    audioRecordJob?.cancel()
-    audioRecordJob = lifecycleScope.launch(Dispatchers.IO) {
+@RequiresPermission(allOf = [Manifest.permission.RECORD_AUDIO, Manifest.permission_group.STORAGE])
+fun startRecord(
+    coroutineScope: CoroutineScope,
+    outputDir: String,
+    pcmFileName: String,
+    wavFileName: String,
+) {
+    stopRecord()
+    mAudioRecordJob = coroutineScope.launch(Dispatchers.IO) {
         runCatching {
             // 获取最小 buffer 大小，采样率为 44100，双声道，采样位数为 16bit
-            val minBufferSize by lazy {
-                AudioRecord.getMinBufferSize(
-                    /* sampleRateInHz = */ AUDIO_SAMPLE_RATE,
-                    /* channelConfig = */ AudioFormat.CHANNEL_IN_STEREO,
-                    /* audioFormat = */ AudioFormat.ENCODING_PCM_16BIT,
-                )
-            }
+            val minBufferSize = AudioRecord.getMinBufferSize(
+                /* sampleRateInHz = */ AUDIO_SAMPLE_RATE,
+                /* channelConfig = */ AudioFormat.CHANNEL_IN_STEREO,
+                /* audioFormat = */ AudioFormat.ENCODING_PCM_16BIT,
+            )
             // 创建 AudioRecord
             val audioRecord = AudioRecord(
                 /* audioSource = */ MediaRecorder.AudioSource.MIC,
@@ -160,10 +170,10 @@ private fun startRecord() {
                 /* audioFormat = */ AudioFormat.ENCODING_PCM_16BIT,
                 /* bufferSizeInBytes = */ minBufferSize
             )
-            // 创建pcm文件
-            val pcmFile = getFile(path = AUDIO_SAVE_PATH, name = "testAudio.pcm")
+            // 创建 pcm 文件
+            val pcmFile = getFile(path = outputDir, name = pcmFileName)
             // 创建wav文件
-            val wavFile = getFile(path = AUDIO_SAVE_PATH, name = "testAudio.wav")
+            val wavFile = getFile(path = outputDir, name = wavFileName)
             FileOutputStream(wavFile).use { wavFos ->
                 FileOutputStream(pcmFile).use { pcmFos ->
                     // 先写头部，但现在并不知道 pcm 文件的大小
@@ -176,9 +186,9 @@ private fun startRecord() {
 
                     // 开始录制
                     audioRecord.startRecording()
-                    Log.i(TAG, "startRecord: 开始录音")
+                    Log.i(TAG, "开始录音")
                     val buffer = ByteArray(minBufferSize)
-                    while (audioRecordJob != null) {
+                    while (mAudioRecordJob?.isActive == true) {
                         // 读取数据
                         val read = audioRecord.read(buffer, 0, buffer.size)
                         if (AudioRecord.ERROR_INVALID_OPERATION != read) {
@@ -205,13 +215,23 @@ private fun startRecord() {
 
                     // 录制结束
                     audioRecord.release()
-                    Log.i(TAG, "startRecord: 录音结束")
+                    Log.i(TAG, "录音结束")
                 }
             }
         }.onFailure {
-            Log.e(TAG, "startRecord: $it")
+            it.printStackTrace()
         }
     }
+}
+```
+
+```kotlin
+/**
+ * 停止录音
+ */
+fun stopRecord() {
+    mAudioRecordJob?.cancel()
+    mAudioRecordJob = null
 }
 ```
 
@@ -299,16 +319,20 @@ private fun generateWavFileHeader(pcmAudioByteCount: Long, longSampleRate: Long,
 2. **播放 wav 文件**
 
 ```kotlin
-    /**
+/**
  * 播放 Wav
  */
-private fun playWav() {
+fun playWav(
+    context: Context,
+    dirPath: String,
+    wavFileName: String,
+) {
     // wav文件
-    val wavFile = File(AUDIO_SAVE_PATH, "testAudio.wav")
+    val wavFile = File(dirPath, wavFileName)
     if (wavFile.exists()) {
         playMedia(wavFile.absolutePath)
     } else {
-        Toast.makeText(this, "请先录制", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, "请先录制", Toast.LENGTH_SHORT).show()
     }
 }
 ```
@@ -349,13 +373,17 @@ fun playMedia(path: String) {
 > write() 时向 AudioTrack 写入连续的数据流，数据会从 Java 层传输到底层，并排队阻塞等待播放。当音频数据太大无法存入内存，或者接收或生成时先前排队的音频正在播放，流模式比较好用。
 
 ```kotlin
-    /**
- * 播放PCM音频（Stream模式）
+/**
+ * 播放 pcm 音频（Stream模式）
  */
-private fun playPcmStream() {
-    audioTrackJob?.cancel()
-    audioTrackJob = lifecycleScope.launch(Dispatchers.IO) {
+fun playPcmStream(coroutineScope: CoroutineScope, pcmFile: File) {
+    mAudioTrackJob?.cancel()
+    mAudioTrackJob = coroutineScope.launch(Dispatchers.IO) {
         runCatching {
+            if (!pcmFile.exists()) {
+                Log.d(TAG, "音频文件不存在：${pcmFile.absolutePath}")
+                return@runCatching
+            }
             // 声道
             val channel = AudioFormat.CHANNEL_IN_STEREO
             // 采样位数
@@ -377,13 +405,11 @@ private fun playPcmStream() {
                 .setChannelMask(channel)
                 .build()
             // 由于是流模式，大小只需获取一帧的最小 buffer 即可，采样率为 44100，双声道，采样位数为 16bit
-            val minBufferSize by lazy {
-                AudioTrack.getMinBufferSize(
-                    /* sampleRateInHz = */ AUDIO_SAMPLE_RATE,
-                    /* channelConfig = */ channel,
-                    /* audioFormat = */ encoding,
-                )
-            }
+            val minBufferSize = AudioTrack.getMinBufferSize(
+                /* sampleRateInHz = */ AUDIO_SAMPLE_RATE,
+                /* channelConfig = */ channel,
+                /* audioFormat = */ encoding,
+            )
             // 创建 AudioTrack
             val audioTrack = AudioTrack(
                 /* attributes = */ audioAttrs,
@@ -394,19 +420,19 @@ private fun playPcmStream() {
             )
             // 开始播放，等待数据
             audioTrack.play()
-            val pcmFile = File(AUDIO_SAVE_PATH, "testAudio.pcm")
-            if (pcmFile.exists()) {
-                FileInputStream(pcmFile).use {
-                    val buffer = ByteArray(minBufferSize)
-                    var len: Int
-                    while (it.read(buffer).also { len = it } > 0) {
-                        // 写入连续的数据流，有数据就会播放
-                        audioTrack.write(buffer, 0, len)
-                    }
-                    audioTrack.stop()
-                    audioTrack.release()
+            Log.d(TAG, "开始播放音频：${pcmFile.absolutePath}")
+            FileInputStream(pcmFile).use {
+                val buffer = ByteArray(minBufferSize)
+                var len: Int
+                while (it.read(buffer).also { len = it } > 0) {
+                    // 写入连续的数据流，有数据就会播放
+                    audioTrack.write(buffer, 0, len)
                 }
             }
+            // 释放资源
+            audioTrack.stop()
+            audioTrack.release()
+            Log.d(TAG, "音频播放完毕：${pcmFile.absolutePath}")
         }.onFailure {
             it.printStackTrace()
         }
@@ -422,30 +448,34 @@ private fun playPcmStream() {
 /**
  * 播放PCM音频（Static模式）
  */
-private fun playPcmStatic() {
-    runCatching {
-        // 声道
-        val channel = AudioFormat.CHANNEL_IN_STEREO
-        // 采样位数
-        val encoding = AudioFormat.ENCODING_PCM_16BIT
-        // 设置音频信息属性
-        val audioAttrs = AudioAttributes.Builder()
-            // 设置支持多媒体属性
-            .setUsage(AudioAttributes.USAGE_MEDIA)
+fun playPcmStatic(coroutineScope: CoroutineScope, pcmFile: File) {
+    mAudioTrackJob?.cancel()
+    mAudioTrackJob = coroutineScope.launch(Dispatchers.IO) {
+        runCatching {
+            if (!pcmFile.exists()) {
+                Log.d(TAG, "音频文件不存在：${pcmFile.absolutePath}")
+                return@runCatching
+            }
+            // 声道
+            val channel = AudioFormat.CHANNEL_IN_STEREO
+            // 采样位数
+            val encoding = AudioFormat.ENCODING_PCM_16BIT
+            // 设置音频信息属性
+            val audioAttrs = AudioAttributes.Builder()
+                // 设置支持多媒体属性
+                .setUsage(AudioAttributes.USAGE_MEDIA)
+                // 设置音频格式
+                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                .build()
             // 设置音频格式
-            .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-            .build()
-        // 设置音频格式
-        val audioFormat = AudioFormat.Builder()
-            // 设置采样率
-            .setSampleRate(AUDIO_SAMPLE_RATE)
-            // 设置采样位数
-            .setEncoding(encoding)
-            // 设置声道
-            .setChannelMask(channel)
-            .build()
-        val pcmFile = File(AUDIO_SAVE_PATH, "testAudio.pcm")
-        if (pcmFile.exists()) {
+            val audioFormat = AudioFormat.Builder()
+                // 设置采样率
+                .setSampleRate(AUDIO_SAMPLE_RATE)
+                // 设置采样位数
+                .setEncoding(encoding)
+                // 设置声道
+                .setChannelMask(channel)
+                .build()
             FileInputStream(pcmFile).use {
                 ByteArrayOutputStream().use { baos ->
                     val buffer = ByteArray(1024)
@@ -470,9 +500,9 @@ private fun playPcmStatic() {
                     audioTrack.play()
                 }
             }
+        }.onFailure {
+            it.printStackTrace()
         }
-    }.onFailure {
-        it.printStackTrace()
     }
 }
 ```

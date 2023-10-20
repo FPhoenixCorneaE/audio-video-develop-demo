@@ -24,7 +24,7 @@ fun playMedia(path: String) {
             prepare()
             start()
             setOnCompletionListener {
-                closeMedia()
+                releaseMediaPlayer()
             }
         }
     }.onFailure {
@@ -45,7 +45,7 @@ fun playMedia(rawId: Int) {
                 // prepare()
                 start()
                 setOnCompletionListener {
-                    closeMedia()
+                    releaseMediaPlayer()
                 }
             }
         }.onFailure {
@@ -67,13 +67,13 @@ fun playMedia(data: ByteArray, audioType: String) {
             fos.write(data)
             fos.close()
             val fis = FileInputStream(tempMp3)
-            closeMedia()
+            releaseMediaPlayer()
             mMediaPlayer = MediaPlayer().apply {
                 setDataSource(fis.fd)
                 prepare()
                 start()
                 setOnCompletionListener {
-                    closeMedia()
+                    releaseMediaPlayer()
                 }
             }
             fis.close()
@@ -83,7 +83,7 @@ fun playMedia(data: ByteArray, audioType: String) {
     }
 }
 
-fun closeMedia() {
+fun releaseMediaPlayer() {
     runCatching {
         mMediaPlayer?.apply {
             if (isPlaying) {

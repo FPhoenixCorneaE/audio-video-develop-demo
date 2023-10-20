@@ -46,7 +46,9 @@ object MediaPlayerHelper {
     }
 
     fun release() {
-        mediaPlayer?.stop()
+        if (mediaPlayer?.isPlaying == true) {
+            mediaPlayer?.stop()
+        }
         mediaPlayer?.release()
         mediaPlayer = null
     }
