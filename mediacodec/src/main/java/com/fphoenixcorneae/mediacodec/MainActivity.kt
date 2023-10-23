@@ -46,6 +46,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
+import com.fphoenixcorneae.mediacodec.decode.SyncDecodeAudioImpl
 import com.fphoenixcorneae.mediacodec.decode.SyncDecodeVideoImpl
 import com.fphoenixcorneae.mediacodec.ui.theme.AudioVideoDevelopDemoTheme
 import com.fphoenixcorneae.mediacodec.ui.theme.Purple40
@@ -72,6 +73,7 @@ class MainActivity : ComponentActivity() {
 
     private var mExecutorService = Executors.newFixedThreadPool(2)
     private var mSyncDecodeVideoImpl: SyncDecodeVideoImpl? = null
+    private var mSyncDecodeAudioImpl: SyncDecodeAudioImpl? = null
 
     @SuppressLint("MissingPermission")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -160,9 +162,11 @@ class MainActivity : ComponentActivity() {
                         Button(
                             onClick = {
                                 mExecutorService.shutdownNow()
-//                                mSyncDecodeVideoImpl?.release()
+                                mSyncDecodeVideoImpl?.stop()
+                                mSyncDecodeAudioImpl?.stop()
                                 mExecutorService = Executors.newFixedThreadPool(2)
                                 mExecutorService.execute(mSyncDecodeVideoImpl)
+                                mExecutorService.execute(mSyncDecodeAudioImpl)
                             },
                             contentPadding = PaddingValues(0.dp),
                             shape = RoundedCornerShape(8.dp),
@@ -206,6 +210,7 @@ class MainActivity : ComponentActivity() {
                                                 Uri.parse("android.resource://${context.packageName}/raw/big_buck_bunny")
                                             mSyncDecodeVideoImpl =
                                                 SyncDecodeVideoImpl(context, videoUri, surface)
+                                            mSyncDecodeAudioImpl = SyncDecodeAudioImpl(context, videoUri)
                                         }
 
                                         override fun onSurfaceTextureSizeChanged(

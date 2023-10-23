@@ -44,7 +44,7 @@ class SyncDecodeVideoImpl : AbstractSyncDecode {
 
     override fun handleOutputData(bufferInfo: MediaCodec.BufferInfo) {
         // 获取输出 buffer 下标
-        var outputBufferId = mMediaCodec?.dequeueOutputBuffer(bufferInfo, TIME_US)
+        var outputBufferId = mMediaCodec?.dequeueOutputBuffer(bufferInfo, TIMEOUT_US)
 
         while (outputBufferId != null && outputBufferId >= 0) {
             // 矫正 pts
@@ -55,7 +55,7 @@ class SyncDecodeVideoImpl : AbstractSyncDecode {
                 // 所有解码后的帧都被渲染
                 break
             }
-            outputBufferId = mMediaCodec?.dequeueOutputBuffer(bufferInfo, TIME_US)
+            outputBufferId = mMediaCodec?.dequeueOutputBuffer(bufferInfo, TIMEOUT_US)
         }
     }
 }

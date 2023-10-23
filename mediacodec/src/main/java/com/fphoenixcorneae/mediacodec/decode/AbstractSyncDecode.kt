@@ -12,14 +12,15 @@ import android.view.Surface
 abstract class AbstractSyncDecode : ISyncDecode, Runnable {
 
     companion object {
-        const val TIME_US = 10000L
+        private const val TAG = "SyncDecode"
+        const val TIMEOUT_US = 10000L
     }
 
     private val mBufferInfo by lazy { BufferInfo() }
     protected val mMediaExtractor by lazy { MediaExtractor() }
     protected var mMediaFormat: MediaFormat? = null
     protected var mMediaCodec: MediaCodec? = null
-    private var isDone = false
+    private lateinit var mState: State
 
     constructor(path: String, surface: Surface? = null) {
         runCatching {
@@ -56,7 +57,8 @@ abstract class AbstractSyncDecode : ISyncDecode, Runnable {
                     mMediaCodec?.configure(mMediaFormat, surface, null, 0)
                     // 开始进行编解码
                     mMediaCodec?.start()
-                    Log.d("SyncDecode", "开始解码")
+                    mState = State.WaitingDecode
+                    Log.d(TAG, "等待解码...")
                     return@run
                 }
             }
@@ -64,15 +66,17 @@ abstract class AbstractSyncDecode : ISyncDecode, Runnable {
     }
 
     override fun run() {
+        mState = State.Decoding
+        Log.d(TAG, "开始解码")
         runCatching {
             if (mMediaCodec == null) {
                 return@runCatching
             }
-            while (!isDone) {
-                // 延迟 TIME_US 等待拿到空的 input buffer 下标，单位为 us
+            while (mState == State.Decoding) {
+                // 延迟 TIMEOUT_US 等待拿到空的 input buffer 下标，单位为 us
                 // -1 表示一直等待，直到拿到数据，0 表示立即返回
-                val inputBufferId = mMediaCodec!!.dequeueInputBuffer(TIME_US)
-                if (inputBufferId > 0) {
+                val inputBufferId = mMediaCodec!!.dequeueInputBuffer(TIMEOUT_US)
+                if (inputBufferId >= 0) {
                     // 拿到空的 input buffer
                     mMediaCodec?.getInputBuffer(inputBufferId)?.let {
                         // 先清空数据
@@ -103,7 +107,7 @@ abstract class AbstractSyncDecode : ISyncDecode, Runnable {
                                 /* presentationTimeUs = */ 0,
                                 /* flags = */ MediaCodec.BUFFER_FLAG_END_OF_STREAM,
                             )
-                            isDone = true
+                            mState = State.DecodeFinished
                         }
                     }
                 }
@@ -113,21 +117,42 @@ abstract class AbstractSyncDecode : ISyncDecode, Runnable {
             release()
         }.onFailure {
             it.printStackTrace()
+            mState = State.DecodeFailed
+        }
+    }
+
+    open fun stop() {
+        Log.d(TAG, "停止解码")
+        runCatching {
+            if (mState == State.Decoding) {
+                mState = State.DecodeInterrupt
+                mMediaCodec?.stop()
+            }
+        }.onFailure {
+            it.printStackTrace()
         }
     }
 
     /**
      * 释放资源
      */
-    fun release() {
-        Log.d("SyncDecode", "释放资源")
+    open fun release() {
+        Log.d(TAG, "释放资源")
         runCatching {
-            isDone = true
             mMediaCodec?.stop()
+            mMediaCodec?.reset()
             mMediaCodec?.release()
             mMediaExtractor.release()
         }.onFailure {
             it.printStackTrace()
         }
+    }
+
+    internal enum class State {
+        WaitingDecode,
+        Decoding,
+        DecodeInterrupt,
+        DecodeFinished,
+        DecodeFailed,
     }
 }
