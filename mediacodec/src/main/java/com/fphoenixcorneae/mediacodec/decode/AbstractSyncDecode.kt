@@ -26,6 +26,7 @@ abstract class AbstractSyncDecode : ISyncDecode, Runnable {
         runCatching {
             mMediaExtractor.setDataSource(path, null)
             getTrack2Decode(surface)
+            start()
         }.onFailure {
             it.printStackTrace()
         }
@@ -35,6 +36,7 @@ abstract class AbstractSyncDecode : ISyncDecode, Runnable {
         runCatching {
             mMediaExtractor.setDataSource(context, uri, null)
             getTrack2Decode(surface)
+            start()
         }.onFailure {
             it.printStackTrace()
         }
@@ -55,10 +57,6 @@ abstract class AbstractSyncDecode : ISyncDecode, Runnable {
                     // 创建 MediaCodec
                     mMediaCodec = MediaCodec.createDecoderByType(mime)
                     mMediaCodec?.configure(mMediaFormat, surface, null, 0)
-                    // 开始进行编解码
-                    mMediaCodec?.start()
-                    mState = State.WaitingDecode
-                    Log.d(TAG, "等待解码...")
                     return@run
                 }
             }
@@ -121,7 +119,14 @@ abstract class AbstractSyncDecode : ISyncDecode, Runnable {
         }
     }
 
-    open fun stop() {
+    override fun start() {
+        // 开始进行编解码
+        mMediaCodec?.start()
+        mState = State.WaitingDecode
+        Log.d(TAG, "等待解码...")
+    }
+
+    override fun stop() {
         Log.d(TAG, "停止解码")
         runCatching {
             if (mState == State.Decoding) {
@@ -136,7 +141,7 @@ abstract class AbstractSyncDecode : ISyncDecode, Runnable {
     /**
      * 释放资源
      */
-    open fun release() {
+    override fun release() {
         Log.d(TAG, "释放资源")
         runCatching {
             mMediaCodec?.stop()

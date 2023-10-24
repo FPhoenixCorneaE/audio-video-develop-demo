@@ -46,6 +46,8 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
+import com.fphoenixcorneae.mediacodec.decode.AsyncDecodeAudioImpl
+import com.fphoenixcorneae.mediacodec.decode.AsyncDecodeVideoImpl
 import com.fphoenixcorneae.mediacodec.decode.SyncDecodeAudioImpl
 import com.fphoenixcorneae.mediacodec.decode.SyncDecodeVideoImpl
 import com.fphoenixcorneae.mediacodec.ui.theme.AudioVideoDevelopDemoTheme
@@ -74,6 +76,8 @@ class MainActivity : ComponentActivity() {
     private var mExecutorService = Executors.newFixedThreadPool(2)
     private var mSyncDecodeVideoImpl: SyncDecodeVideoImpl? = null
     private var mSyncDecodeAudioImpl: SyncDecodeAudioImpl? = null
+    private var mAsyncDecodeVideoImpl: AsyncDecodeVideoImpl? = null
+    private var mAsyncDecodeAudioImpl: AsyncDecodeAudioImpl? = null
 
     @SuppressLint("MissingPermission")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -81,6 +85,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val context = LocalContext.current
             var isPressed by remember { mutableStateOf(false) }
+            var textureView: TextureView? = null
             AudioVideoDevelopDemoTheme {
                 // A surface container using the 'background' color from the theme
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
@@ -161,12 +166,17 @@ class MainActivity : ComponentActivity() {
                         }
                         Button(
                             onClick = {
-                                mExecutorService.shutdownNow()
-                                mSyncDecodeVideoImpl?.stop()
-                                mSyncDecodeAudioImpl?.stop()
-                                mExecutorService = Executors.newFixedThreadPool(2)
-                                mExecutorService.execute(mSyncDecodeVideoImpl)
-                                mExecutorService.execute(mSyncDecodeAudioImpl)
+                                textureView?.apply {
+                                    release()
+                                    mExecutorService = Executors.newFixedThreadPool(2)
+                                    val videoUri =
+                                        Uri.parse("android.resource://${context.packageName}/raw/big_buck_bunny")
+                                    mSyncDecodeVideoImpl =
+                                        SyncDecodeVideoImpl(context, videoUri, surfaceTexture)
+                                    mSyncDecodeAudioImpl = SyncDecodeAudioImpl(context, videoUri)
+                                    mExecutorService.execute(mSyncDecodeVideoImpl)
+                                    mExecutorService.execute(mSyncDecodeAudioImpl)
+                                }
                             },
                             contentPadding = PaddingValues(0.dp),
                             shape = RoundedCornerShape(8.dp),
@@ -182,7 +192,16 @@ class MainActivity : ComponentActivity() {
                         }
                         Button(
                             onClick = {
-
+                                textureView?.apply {
+                                    release()
+                                    val videoUri =
+                                        Uri.parse("android.resource://${context.packageName}/raw/big_buck_bunny")
+                                    mAsyncDecodeVideoImpl =
+                                        AsyncDecodeVideoImpl(context, videoUri, surfaceTexture)
+                                    mAsyncDecodeAudioImpl = AsyncDecodeAudioImpl(context, videoUri)
+                                    mAsyncDecodeVideoImpl?.start()
+                                    mAsyncDecodeAudioImpl?.start()
+                                }
                             },
                             contentPadding = PaddingValues(0.dp),
                             shape = RoundedCornerShape(8.dp),
@@ -200,17 +219,13 @@ class MainActivity : ComponentActivity() {
                         AndroidView(
                             factory = {
                                 TextureView(it).apply {
+                                    textureView = this
                                     surfaceTextureListener = object : SurfaceTextureListener {
                                         override fun onSurfaceTextureAvailable(
                                             surface: SurfaceTexture,
                                             width: Int,
                                             height: Int,
                                         ) {
-                                            val videoUri =
-                                                Uri.parse("android.resource://${context.packageName}/raw/big_buck_bunny")
-                                            mSyncDecodeVideoImpl =
-                                                SyncDecodeVideoImpl(context, videoUri, surface)
-                                            mSyncDecodeAudioImpl = SyncDecodeAudioImpl(context, videoUri)
                                         }
 
                                         override fun onSurfaceTextureSizeChanged(
@@ -240,6 +255,14 @@ class MainActivity : ComponentActivity() {
             }
         }
         requestPermissions()
+    }
+
+    fun release() {
+        mExecutorService.shutdownNow()
+        mSyncDecodeVideoImpl?.stop()
+        mSyncDecodeAudioImpl?.stop()
+        mAsyncDecodeVideoImpl?.release()
+        mAsyncDecodeAudioImpl?.release()
     }
 
     private fun requestPermissions() {
