@@ -16,7 +16,7 @@
 
 ### 二、Android MediaCodec 编解码
 
-[Android 音视频编解码(一) -- MediaCodec 初探](/mediacodec/README-MediaCodec 初探.md)
+[Android 音视频编解码(一) -- MediaCodec 初探](/mediacodec/README-MediaCodec初探.md)
 <br>
 [Android 音视频编解码(二) -- MediaCodec 解码(同步和异步)](/mediacodec/README(2).md)
 <br>
