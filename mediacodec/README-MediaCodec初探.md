@@ -29,7 +29,7 @@
   * 在这两种情况下，buffer都不会在任意字节边界上开始或结束，而是在帧/访问单元边界上开始或结束，除非它们被BUFFER_FLAG_PARTIAL_FRAME标记。
 * **原始音频buffer**
 
-  * 原始音频buffer包含PCM音频数据的整个帧，这是每个通道按通道顺序的一个样本。每个样本都是一个 [AudioFormat#ENCODING_PCM_16BIT](https://links.jianshu.com/go?to=https%3A%2F%2Fdeveloper.android.com%2Freference%2Fandroid%2Fmedia%2FAudioFormat.html%23ENCODING_PCM_16BIT)。
+  * 原始音频buffer包含PCM音频数据的整个帧，这是每个通道按通道顺序的一个样本。每个样本都是一个 [AudioFormat#ENCODING_PCM_16BIT](https://developer.android.com/reference/android/media/AudioFormat.html#ENCODING_PCM_16BIT)。
 * **原始视频buffer**
 
   在ByteBuffer模式下，视频buffer根据它们的MediaFormat#KEY_COLOR_FORMAT进行布局。可以从getCodecInfo(). MediaCodecInfo.getCapabilitiesForType.CodecCapability.colorFormats获		取支持的颜色格式。视频编解码器可以支持三种颜色格式:
