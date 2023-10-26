@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.SurfaceTexture
+import android.media.MediaCodecList
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -24,7 +25,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -55,6 +59,7 @@ import com.fphoenixcorneae.mediacodec.ui.theme.Purple40
 import com.fphoenixcorneae.mediacodec.ui.theme.PurpleGrey40
 import java.io.File
 import java.util.concurrent.Executors
+
 
 class MainActivity : ComponentActivity() {
     companion object {
@@ -250,6 +255,51 @@ class MainActivity : ComponentActivity() {
                                 .fillMaxWidth()
                                 .height(240.dp),
                         )
+                        var mediaCodecList by remember { mutableStateOf("") }
+                        Button(
+                            onClick = {
+                                val decoderList = StringBuilder("")
+                                val encoderList = StringBuilder("")
+                                // REGULAR_CODECS参考api说明
+                                val list = MediaCodecList(MediaCodecList.REGULAR_CODECS)
+                                val codecs = list.codecInfos
+
+                                decoderList.append("Decoders: \r\n")
+                                for (codec in codecs) {
+                                    if (codec.isEncoder) {
+                                        continue
+                                    }
+                                    decoderList.append("${codec.name}\r\n")
+                                }
+                                encoderList.append("\r\nEncoders: \r\n")
+                                for (codec in codecs) {
+                                    if (codec.isEncoder) {
+                                        encoderList.append("${codec.name}\r\n")
+                                    }
+                                }
+                                mediaCodecList = decoderList.toString() + encoderList.toString()
+                            },
+                            contentPadding = PaddingValues(0.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 16.dp, top = 20.dp, end = 16.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Purple40,
+                                contentColor = Color.White,
+                            )
+                        ) {
+                            Text(text = "设备支持的编解码器", fontSize = 14.sp)
+                        }
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .wrapContentHeight()
+                                .padding(start = 16.dp, top = 8.dp, end = 16.dp)
+                                .verticalScroll(state = rememberScrollState()),
+                        ) {
+                            Text(text = mediaCodecList, fontSize = 12.sp, color = Color.Black)
+                        }
                     }
                 }
             }
