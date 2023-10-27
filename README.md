@@ -20,7 +20,7 @@
 <br>
 [Android 音视频编解码(二) -- MediaCodec 解码(同步和异步)](/mediacodec/README-MediaCodec解码.md)
 <br>
-[Android 音视频编解码(三) -- 视频编码原理和H264格式](/mediacodec/README(3).md)
+[Android 音视频编解码(三) -- 音视频编解码原理](/mediacodec/README-音视频编解码原理.md)
 <br>
 [Android 音视频编解码(四) -- MediaCodec 编码录屏数据](/mediacodec/README(4).md)
 
