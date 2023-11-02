@@ -1,5 +1,6 @@
 package com.fphoenixcorneae.bluetooth
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -16,10 +17,21 @@ class MainActivity : ComponentActivity() {
             AudioVideoDevelopDemoTheme {
                 // A surface container using the 'background' color from the theme
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-
+                    ClassicBluetoothScreen()
                 }
             }
         }
+        ClassicBluetoothManager.openBlueSync(this)
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        ClassicBluetoothManager.onRequestPermissionsResult(this, requestCode, permissions, grantResults)
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        ClassicBluetoothManager.onActivityResult(this, requestCode, resultCode, data)
     }
 }
 
