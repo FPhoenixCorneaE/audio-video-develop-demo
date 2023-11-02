@@ -459,6 +459,10 @@ fun getBondedDevices(): List<BluetoothDevice>? {
 
 ### 五、经典蓝牙聊天室
 
+客户端 | 服务端
+--- | ---
+![客户端](images/bluetooth-client.jpg) | ![服务端](images/bluetooth-server.jpg)
+
 #### 1. [作为服务器连接](https://developer.android.google.cn/develop/connectivity/bluetooth/connect-bluetooth-devices?hl=zh-cn#connect-server)
 
 > 当两台设备连接时，其中一台充当服务端，它会监听是否有客户端接入，通过以下步骤创建服务端：
