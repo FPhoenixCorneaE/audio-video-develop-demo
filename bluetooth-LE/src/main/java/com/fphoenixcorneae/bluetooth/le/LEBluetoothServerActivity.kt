@@ -9,17 +9,18 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import com.fphoenixcorneae.bluetooth.le.ui.theme.AudiovideodevelopdemoTheme
 
-class MainActivity : ComponentActivity() {
+class LEBluetoothServerActivity : ComponentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             AudiovideodevelopdemoTheme {
                 // A surface container using the 'background' color from the theme
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    LEBluetoothScreen()
+                    LEBluetoothServerScreen()
                 }
             }
         }
-        LEBluetoothManager.openBluetooth(this)
     }
 }
+

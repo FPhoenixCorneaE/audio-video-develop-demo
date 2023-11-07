@@ -28,7 +28,7 @@
 <br>
 [Android 蓝牙开发(二) -- LE(低功耗)蓝牙开发](/bluetooth-LE/README.md)
 <br>
-[Android 蓝牙开发(三) -- 经典蓝牙和 LE(低功耗)蓝牙的区别](/bluetooth-LE/README-经典蓝牙和 LE(低功耗)蓝牙的区别.md)
+[Android 蓝牙开发(三) -- 经典蓝牙和LE(低功耗)蓝牙的区别](/bluetooth-LE/README-经典蓝牙和LE(低功耗)蓝牙的区别.md)
 
 ### 四、WebRTC
 

@@ -21,7 +21,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
-        ClassicBluetoothManager.openBlueSync(this)
+        ClassicBluetoothManager.openBluetoothSync(this)
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {

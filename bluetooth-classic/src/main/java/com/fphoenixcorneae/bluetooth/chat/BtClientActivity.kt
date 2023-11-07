@@ -52,7 +52,7 @@ class BtClientActivity : ComponentActivity() {
             AudioVideoDevelopDemoTheme {
                 // A surface container using the 'background' color from the theme
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    A2dpClientScreen()
+                    BTClientScreen()
                 }
             }
         }
@@ -62,7 +62,7 @@ class BtClientActivity : ComponentActivity() {
 @SuppressLint("MissingPermission")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun A2dpClientScreen() {
+fun BTClientScreen() {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     var messageSend by remember { mutableStateOf("") }

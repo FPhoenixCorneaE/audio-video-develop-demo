@@ -27,12 +27,10 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.BufferedInputStream
-import java.util.UUID
-
 
 object ClassicBluetoothManager {
 
-    private const val TAG = "BluetoothManager"
+    private val TAG = javaClass.simpleName
     private const val REQUEST_CODE_OPEN_BLUETOOTH = 123
     private const val REQUEST_CODE_PERMISSION = 456
     private const val REQUEST_CODE_OPEN_GPS = 789
@@ -45,7 +43,7 @@ object ClassicBluetoothManager {
      * 设备是否支持蓝牙  true为支持
      * @return
      */
-    fun isSupportBlue(): Boolean {
+    fun isSupportBluetooth(): Boolean {
         return mBluetoothAdapter != null
     }
 
@@ -53,8 +51,8 @@ object ClassicBluetoothManager {
      * 蓝牙是否打开   true为打开
      * @return
      */
-    fun isBlueEnable(): Boolean {
-        return isSupportBlue() && mBluetoothAdapter.isEnabled
+    fun isBluetoothEnable(): Boolean {
+        return isSupportBluetooth() && mBluetoothAdapter.isEnabled
     }
 
     /**
@@ -62,8 +60,8 @@ object ClassicBluetoothManager {
      * 这个方法打开蓝牙不会弹出提示
      */
     @SuppressLint("MissingPermission")
-    fun openBlueAsync(activity: Activity) {
-        if (!isBlueEnable() && checkPermissions(activity)) {
+    fun openBluetoothAsync(activity: Activity) {
+        if (!isBluetoothEnable() && checkPermissions(activity)) {
             mBluetoothAdapter.enable()
         }
     }
@@ -74,8 +72,8 @@ object ClassicBluetoothManager {
      * 需要在onActivityResult 方法中判断resultCode == RESULT_OK  true为成功
      */
     @SuppressLint("MissingPermission")
-    fun openBlueSync(activity: Activity) {
-        if (!isBlueEnable() && checkPermissions(activity)) {
+    fun openBluetoothSync(activity: Activity) {
+        if (!isBluetoothEnable() && checkPermissions(activity)) {
             val intent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
             activity.startActivityForResult(intent, REQUEST_CODE_OPEN_BLUETOOTH)
         }
@@ -142,7 +140,7 @@ object ClassicBluetoothManager {
                 // 启动权限设置页面
                 activity.startActivityForResult(intent, REQUEST_CODE_PERMISSION)
             } else {
-                openBlueSync(activity)
+                openBluetoothSync(activity)
             }
         }
     }
@@ -151,7 +149,7 @@ object ClassicBluetoothManager {
     fun onActivityResult(activity: Activity, requestCode: Int, resultCode: Int, data: Intent?) {
         if (requestCode == REQUEST_CODE_OPEN_BLUETOOTH && resultCode == Activity.RESULT_CANCELED) {
             Toast.makeText(activity, "请您不要拒绝开启蓝牙，否则应用无法运行", Toast.LENGTH_SHORT).show()
-            openBlueSync(activity)
+            openBluetoothSync(activity)
         } else if (requestCode == REQUEST_CODE_OPEN_GPS) {
             if (!isGpsOpen(activity)) {
                 // 开启 GPS
@@ -170,7 +168,7 @@ object ClassicBluetoothManager {
                     .setCancelable(false)
                     .show()
             } else {
-                openBlueSync(activity)
+                openBluetoothSync(activity)
             }
         }
     }
@@ -222,7 +220,7 @@ object ClassicBluetoothManager {
      */
     @SuppressLint("MissingPermission")
     fun scanBluetooth(): Boolean {
-        if (!isBlueEnable()) {
+        if (!isBluetoothEnable()) {
             Log.e(TAG, "Bluetooth not enable!")
             return false
         }
@@ -240,7 +238,7 @@ object ClassicBluetoothManager {
      */
     @SuppressLint("MissingPermission")
     fun cancelScanBluetooth(): Boolean {
-        return if (isSupportBlue() && mBluetoothAdapter.isDiscovering) {
+        return if (isSupportBluetooth() && mBluetoothAdapter.isDiscovering) {
             mBluetoothAdapter.cancelDiscovery()
         } else {
             true
@@ -265,7 +263,7 @@ object ClassicBluetoothManager {
             Log.e(TAG, "bond device null")
             return
         }
-        if (!isBlueEnable()) {
+        if (!isBluetoothEnable()) {
             Log.e(TAG, "Bluetooth not enable!")
             return
         }
@@ -295,7 +293,7 @@ object ClassicBluetoothManager {
             Log.d(TAG, "cancel bond device null")
             return
         }
-        if (!isBlueEnable()) {
+        if (!isBluetoothEnable()) {
             Log.e(TAG, "Bluetooth not enable!")
             return
         }
@@ -349,9 +347,8 @@ object ClassicBluetoothManager {
      * @param device
      */
     @SuppressLint("MissingPermission")
-    fun connectBluetooth(
+    fun connectBluetoothA2dp(
         device: BluetoothDevice?,
-        uuid: UUID = UUID.fromString("ed10665e-260f-4050-9734-702beaa5c6ae"),
         onConnectStart: () -> Unit = {},
         onConnectSuccess: (
             @ParameterName("bluetoothDevice") BluetoothDevice?,
@@ -366,14 +363,14 @@ object ClassicBluetoothManager {
             Log.d(TAG, "bond device null")
             return
         }
-        if (!isBlueEnable()) {
+        if (!isBluetoothEnable()) {
             Log.e(TAG, "Bluetooth not enable!")
             return
         }
         // 连接之前把扫描关闭
         cancelScanBluetooth()
 
-        Log.d(TAG, "开始连接蓝牙：${device.name}, uuid: $uuid")
+        Log.d(TAG, "开始连接蓝牙：${device.name}")
         onConnectStart()
         CoroutineScope(Dispatchers.IO).launch {
             runCatching {
@@ -414,9 +411,8 @@ object ClassicBluetoothManager {
      * 前提是系统保存了该地址的对象
      * @param address
      */
-    fun connectBluetooth(
+    fun connectBluetoothA2dp(
         address: String?,
-        uuid: UUID,
         onConnectStart: () -> Unit = {},
         onConnectSuccess: (
             @ParameterName("bluetoothDevice") BluetoothDevice?,
@@ -427,11 +423,11 @@ object ClassicBluetoothManager {
             @ParameterName("errorMsg") String?,
         ) -> Unit = { _, _ -> },
     ) {
-        if (!isBlueEnable()) {
+        if (!isBluetoothEnable()) {
             return
         }
         val device = mBluetoothAdapter.getRemoteDevice(address)
-        connectBluetooth(device, uuid, onConnectStart, onConnectSuccess, onConnectFailed)
+        connectBluetoothA2dp(device, onConnectStart, onConnectSuccess, onConnectFailed)
     }
 
     fun disconnectBluetooth() {

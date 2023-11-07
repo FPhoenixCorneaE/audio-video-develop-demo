@@ -44,7 +44,6 @@ import com.fphoenixcorneae.bluetooth.chat.BtClientActivity
 import com.fphoenixcorneae.bluetooth.chat.BtServerActivity
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.util.UUID
 
 @OptIn(ExperimentalFoundationApi::class)
 @SuppressLint("MissingPermission")
@@ -199,9 +198,8 @@ fun ClassicBluetoothScreen() {
                             .setMessage("连接蓝牙 ${bondedDeviceStateList[it]?.name}")
                             .setNegativeButton("取消") { dialog, which -> }
                             .setPositiveButton("确定") { dialog, which ->
-                                ClassicBluetoothManager.connectBluetooth(
+                                ClassicBluetoothManager.connectBluetoothA2dp(
                                     bondedDeviceStateList[it],
-                                    UUID.randomUUID(),
                                     onConnectStart = {
                                         Toast
                                             .makeText(context, "开始连接", Toast.LENGTH_SHORT)
