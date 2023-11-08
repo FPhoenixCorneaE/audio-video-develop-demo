@@ -105,13 +105,14 @@ object LEBluetoothManager {
     }
 
     /**
-     * 自动打开蓝牙，需在 onResume() 之前调用
-     * @param sync true  为同步打开蓝牙，打开蓝牙会弹出提示
-     *             false 为异步打开蓝牙，蓝牙不会立刻就处于开启状态，并且打开蓝牙不会弹出提示，
+     * 开启蓝牙，需在 onResume() 之前调用
+     * @param sync true  为同步提示开启蓝牙，打开蓝牙会弹出提示
+     *             false 为异步自动开启蓝牙，蓝牙不会立刻就处于开启状态，并且打开蓝牙不会弹出提示，
      */
     @SuppressLint("MissingPermission")
     fun openBluetooth(
-        activity: ComponentActivity, sync: Boolean = true,
+        activity: ComponentActivity,
+        sync: Boolean = true,
         shouldShowRequestPermissionRationale: () -> Unit = {
             AlertDialog.Builder(activity)
                 .setTitle("提示")
@@ -610,7 +611,7 @@ object LEBluetoothManager {
         val advertiseSettings = AdvertiseSettings.Builder()
             // 低延时，高功率，不使用后台
             .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY)
-            // 高发送功率
+            // 高传输功率
             .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH)
             // 可连接
             .setConnectable(true)
