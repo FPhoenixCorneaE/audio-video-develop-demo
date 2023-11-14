@@ -7,7 +7,6 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 
-
 class BluetoothBondBroadcastReceiver(
     val onBondRequest: () -> Unit = {},
     val onBondFail: () -> Unit = {},

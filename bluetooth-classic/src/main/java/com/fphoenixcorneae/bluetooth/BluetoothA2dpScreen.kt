@@ -4,7 +4,7 @@ import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.bluetooth.BluetoothClass
 import android.bluetooth.BluetoothDevice
-import android.content.Intent
+import android.content.Context
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -40,47 +40,47 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.fphoenixcorneae.bluetooth.chat.BtClientActivity
-import com.fphoenixcorneae.bluetooth.chat.BtServerActivity
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
 @SuppressLint("MissingPermission")
 @Composable
-fun ClassicBluetoothScreen() {
+fun BluetoothA2dpScreen() {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val coroutineScope = rememberCoroutineScope()
     val bondedDeviceStateList = remember { mutableStateListOf<BluetoothDevice?>() }
     val scanBluetoothResult = remember { mutableStateListOf<BluetoothDevice?>() }
-    ClassicBluetoothManager.registerBluetoothScanBroadcastReceiver(
-        context,
-        lifecycleOwner,
-        onScanning = {
-            Log.d("TAG", "ClassicBluetoothScreen: name: ${it?.name} type: ${it?.bluetoothClass?.deviceClass}")
-            if (!it?.name.isNullOrEmpty()
-                && it?.bondState == BluetoothDevice.BOND_NONE
-                && !scanBluetoothResult.contains(it)
-            ) {
-                scanBluetoothResult.add(it)
-            }
-        },
-    ).registerBluetoothBondBroadcastReceiver(
-        context,
-        lifecycleOwner,
-        onBondFail = {
-            coroutineScope.launch {
-                delay(1000)
+    ClassicBluetoothManager.getProfileA2dpProxy(context)
+        .registerBluetoothA2dpBroadcastReceiver(context, lifecycleOwner)
+        .registerBluetoothScanBroadcastReceiver(
+            context,
+            lifecycleOwner,
+            onScanning = {
+                Log.d("TAG", "ClassicBluetoothScreen: name: ${it?.name} type: ${it?.bluetoothClass?.deviceClass}")
+                if (!it?.name.isNullOrEmpty()
+                    && it?.bondState == BluetoothDevice.BOND_NONE
+                    && !scanBluetoothResult.contains(it)
+                ) {
+                    scanBluetoothResult.add(it)
+                }
+            },
+        ).registerBluetoothBondBroadcastReceiver(
+            context,
+            lifecycleOwner,
+            onBondFail = {
+                coroutineScope.launch {
+                    delay(1000)
+                    // 扫描
+                    scanBluetooth(bondedDeviceStateList, scanBluetoothResult)
+                }
+            },
+            onBondSuccess = {
                 // 扫描
                 scanBluetooth(bondedDeviceStateList, scanBluetoothResult)
             }
-        },
-        onBondSuccess = {
-            // 扫描
-            scanBluetooth(bondedDeviceStateList, scanBluetoothResult)
-        }
-    )
+        )
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -107,58 +107,6 @@ fun ClassicBluetoothScreen() {
                         .fillMaxWidth(),
                 ) {
                     Text(text = "扫描", fontSize = 16.sp)
-                }
-                Button(
-                    onClick = {
-                        context.startActivity(Intent(context, BluetoothA2dpActivity::class.java))
-                    },
-                    contentPadding = PaddingValues(horizontal = 0.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.LightGray,
-                        contentColor = Color.Black,
-                    ),
-                    shape = RoundedCornerShape(4.dp),
-                    modifier = Modifier
-                        .padding(horizontal = 16.dp)
-                        .fillMaxWidth(),
-                ) {
-                    Text(text = "手机与蓝牙耳机/音箱配对，并播放音频", fontSize = 16.sp)
-                }
-                Button(
-                    onClick = {
-                        if (BluetoothStatic.bluetoothDevice == null) {
-                            Toast.makeText(context, "请先选择一个蓝牙设备", Toast.LENGTH_SHORT).show()
-                            return@Button
-                        }
-                        context.startActivity(Intent(context, BtClientActivity::class.java))
-                    },
-                    contentPadding = PaddingValues(horizontal = 0.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.LightGray,
-                        contentColor = Color.Black,
-                    ),
-                    shape = RoundedCornerShape(4.dp),
-                    modifier = Modifier
-                        .padding(horizontal = 16.dp)
-                        .fillMaxWidth(),
-                ) {
-                    Text(text = "传统蓝牙客户端（流模式）", fontSize = 16.sp)
-                }
-                Button(
-                    onClick = {
-                        context.startActivity(Intent(context, BtServerActivity::class.java))
-                    },
-                    contentPadding = PaddingValues(horizontal = 0.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.LightGray,
-                        contentColor = Color.Black,
-                    ),
-                    shape = RoundedCornerShape(4.dp),
-                    modifier = Modifier
-                        .padding(horizontal = 16.dp)
-                        .fillMaxWidth(),
-                ) {
-                    Text(text = "传统蓝牙服务端（流模式）", fontSize = 16.sp)
                 }
                 Text(
                     text = "已配对的设备",
@@ -199,15 +147,15 @@ fun ClassicBluetoothScreen() {
                         AlertDialog
                             .Builder(context)
                             .setTitle("提示")
-                            .setMessage("您要取消与蓝牙 ${bondedDeviceStateList[it]?.name} 配对嘛")
+                            .setMessage("您要断开与蓝牙 ${bondedDeviceStateList[it]?.name} 连接嘛")
                             .setNegativeButton("取消") { dialog, which -> }
                             .setPositiveButton("确定") { dialog, which ->
-                                ClassicBluetoothManager.cancelBondBluetooth(bondedDeviceStateList[it])
+                                ClassicBluetoothManager.disconnectBluetoothA2dp(bondedDeviceStateList[it])
                             }
                             .setCancelable(false)
                             .show()
                     }) {
-                        BluetoothStatic.bluetoothDevice = bondedDeviceStateList[it]
+                        connectBluetoothA2dp(bondedDeviceStateList[it], context)
                     }
             ) {
                 Image(
@@ -271,8 +219,7 @@ fun ClassicBluetoothScreen() {
                     )
                     .padding(horizontal = 8.dp)
                     .clickable {
-                        BluetoothStatic.bluetoothDevice = scanBluetoothResult[it]
-                        ClassicBluetoothManager.bondBluetooth(scanBluetoothResult[it])
+                        connectBluetoothA2dp(scanBluetoothResult[it], context)
                     }
             ) {
                 Image(
@@ -302,6 +249,30 @@ fun ClassicBluetoothScreen() {
             Spacer(modifier = Modifier.height(20.dp))
         }
     }
+}
+
+private fun connectBluetoothA2dp(
+    bluetoothDevice: BluetoothDevice?,
+    context: Context,
+) {
+    ClassicBluetoothManager.connectBluetoothA2dp(
+        bluetoothDevice,
+        onConnectStart = {
+            Toast
+                .makeText(context, "开始连接", Toast.LENGTH_SHORT)
+                .show()
+        },
+        onConnectSuccess = { device, bluetoothSocket ->
+            Toast
+                .makeText(context, "连接成功", Toast.LENGTH_SHORT)
+                .show()
+        },
+        onConnectFailed = { device, errorMsg ->
+            Toast
+                .makeText(context, "连接失败：$errorMsg", Toast.LENGTH_SHORT)
+                .show()
+        }
+    )
 }
 
 private fun scanBluetooth(

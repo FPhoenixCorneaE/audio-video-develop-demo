@@ -41,6 +41,7 @@
         </activity>
         <activity android:name="com.fphoenixcorneae.bluetooth.chat.BtClientActivity" />
         <activity android:name="com.fphoenixcorneae.bluetooth.chat.BtServerActivity" />
+        <activity android:name="com.fphoenixcorneae.bluetooth.BluetoothA2dpActivity" />
     </application>
 
 </manifest>

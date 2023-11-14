@@ -4,8 +4,10 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.AlertDialog
+import android.bluetooth.BluetoothA2dp
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothProfile
 import android.bluetooth.BluetoothSocket
 import android.content.Context
 import android.content.Intent
@@ -23,7 +25,7 @@ import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.BufferedInputStream
@@ -38,6 +40,9 @@ object ClassicBluetoothManager {
     /** 蓝牙适配器 */
     private val mBluetoothAdapter by lazy { BluetoothAdapter.getDefaultAdapter() }
     private var mBluetoothSocket: BluetoothSocket? = null
+
+    /** 用于控制蓝牙 A2DP 服务的代理 */
+    private var mBluetoothA2dp: BluetoothA2dp? = null
 
     /**
      * 设备是否支持蓝牙  true为支持
@@ -297,7 +302,7 @@ object ClassicBluetoothManager {
             Log.e(TAG, "Bluetooth not enable!")
             return
         }
-        //判断设备是否配对，没有配对就不用取消了
+        // 判断设备是否配对，没有配对就不用取消了
         if (device.bondState != BluetoothDevice.BOND_NONE) {
             Log.d(TAG, "attempt to cancel bond:" + device.name)
             runCatching {
@@ -342,7 +347,7 @@ object ClassicBluetoothManager {
     }
 
     /**
-     * 连接 （在配对之后调用）
+     * 连接蓝牙音箱、蓝牙耳机 （在配对之后调用）
      * 经典蓝牙连接相当于 socket 连接，是个非常耗时的操作，所以应该放到子线程中去完成。
      * @param device
      */
@@ -370,28 +375,34 @@ object ClassicBluetoothManager {
         // 连接之前把扫描关闭
         cancelScanBluetooth()
 
-        Log.d(TAG, "开始连接蓝牙：${device.name}")
+        Log.d(TAG, "开始连接蓝牙A2dp：${device.name}")
         onConnectStart()
         CoroutineScope(Dispatchers.IO).launch {
             runCatching {
-                val method = device.javaClass.getMethod("createRfcommSocket", Int::class.java)
-                // 通过反射机制将 BluetoothSocket 的端口号为2时蓝牙连接成功
-                mBluetoothSocket = method.invoke(device, 2) as? BluetoothSocket
-                if (!isConnectBluetooth()) {
-                    // connect() 方法为阻塞调用
-                    mBluetoothSocket?.connect()
+                if (BluetoothDevice.BOND_BONDED != device.bondState) {
+                    val method = device.javaClass.getMethod("createRfcommSocket", Int::class.java)
+                    method.isAccessible = true
+                    // 通过反射机制用 createRfcommSocket() 方法去建立 RFCOMM 通道，找一个通道去连接即可，channel 1～30
+                    // 为啥不用 createRfcommSocketToServiceRecord(UUID) ？ 因为不知道蓝牙音箱或耳机等的 UUID。
+                    mBluetoothSocket = method.invoke(device, 1) as? BluetoothSocket
+                    if (!isConnectBluetooth()) {
+                        // connect() 方法为阻塞调用
+                        mBluetoothSocket?.connect()
+                        // 延时，以便于去连接
+                        delay(2000)
+                    }
                 }
                 withContext(Dispatchers.Main) {
-                    if (isConnectBluetooth()) {
-                        Log.d(TAG, "蓝牙连接成功：${device.name}")
+                    if (connectBluetoothA2dp(device)) {
+                        Log.d(TAG, "蓝牙A2dp连接成功：${device.name}")
                         onConnectSuccess(device, mBluetoothSocket)
                     } else {
-                        Log.d(TAG, "蓝牙连接失败：${device.name}")
+                        Log.d(TAG, "蓝牙A2dp连接失败：${device.name}")
                         onConnectFailed(device, "连接失败")
                     }
                 }
             }.onFailure {
-                Log.d(TAG, "蓝牙socket连接失败")
+                Log.d(TAG, "蓝牙socket连接失败: ${it.message}")
                 withContext(Dispatchers.Main) {
                     onConnectFailed(device, it.message)
                 }
@@ -400,13 +411,14 @@ object ClassicBluetoothManager {
                     mBluetoothSocket?.close()
                 }.onFailure {
                     it.printStackTrace()
-                    Log.d(TAG, "蓝牙socket关闭失败")
+                    Log.d(TAG, "蓝牙socket关闭失败: ${it.message}")
                 }
             }
         }
     }
 
     /**
+     * 连接蓝牙音箱、蓝牙耳机
      * 输入mac地址进行自动配对
      * 前提是系统保存了该地址的对象
      * @param address
@@ -442,6 +454,74 @@ object ClassicBluetoothManager {
         mBluetoothSocket = null
     }
 
+    fun disconnectBluetoothA2dp(bluetoothDevice: BluetoothDevice?) {
+        runCatching {
+            // 通过反射获取 BluetoothA2dp 中 disconnect() 方法，断开连接
+            val disconnectMethod = BluetoothA2dp::class.java.getMethod("disconnect", BluetoothDevice::class.java)
+            disconnectMethod.isAccessible = true
+            disconnectMethod.invoke(mBluetoothA2dp, bluetoothDevice)
+            mBluetoothAdapter?.closeProfileProxy(BluetoothProfile.A2DP, mBluetoothA2dp)
+        }.onFailure {
+            it.printStackTrace()
+        }
+    }
+
+    fun registerBluetoothA2dpBroadcastReceiver(
+        context: Context,
+        lifecycleOwner: LifecycleOwner,
+        onConnecting: () -> Unit = {},
+        onConnected: () -> Unit = {},
+        onDisconnected: () -> Unit = {},
+        onPlaying: () -> Unit = {},
+        onNotPlaying: () -> Unit = {},
+    ) = apply {
+        val receiver =
+            BluetoothA2dpBroadcastReceiver(onConnecting, onConnected, onDisconnected, onPlaying, onNotPlaying)
+        val lifecycleObserver = object : DefaultLifecycleObserver {
+            override fun onStart(owner: LifecycleOwner) {
+                IntentFilter().apply {
+                    addAction(BluetoothA2dp.ACTION_CONNECTION_STATE_CHANGED)
+                    addAction(BluetoothA2dp.ACTION_PLAYING_STATE_CHANGED)
+                }.also {
+                    context.registerReceiver(receiver, it)
+                }
+            }
+
+            override fun onStop(owner: LifecycleOwner) {
+                context.unregisterReceiver(receiver)
+            }
+
+            override fun onDestroy(owner: LifecycleOwner) {
+                lifecycleOwner.lifecycle.removeObserver(this)
+            }
+        }
+
+        lifecycleOwner.lifecycle.addObserver(lifecycleObserver)
+    }
+
+    fun getProfileA2dpProxy(context: Context) = apply {
+        mBluetoothAdapter.getProfileProxy(
+            context,
+            object : BluetoothProfile.ServiceListener {
+                override fun onServiceConnected(profile: Int, proxy: BluetoothProfile?) {
+                    Log.d(TAG, "onServiceConnected: $profile, $proxy")
+                    if (BluetoothProfile.A2DP == profile) {
+                        mBluetoothA2dp = proxy as BluetoothA2dp
+                    }
+                }
+
+                override fun onServiceDisconnected(profile: Int) {
+                    Log.d(TAG, "onServiceDisconnected: $profile")
+                    if (BluetoothProfile.A2DP == profile) {
+                        mBluetoothA2dp = null
+                    }
+                }
+
+            },
+            BluetoothProfile.A2DP,
+        )
+    }
+
     /**
      * 获取已连接的蓝牙设备
      */
@@ -474,6 +554,15 @@ object ClassicBluetoothManager {
     fun isConnectBluetooth(): Boolean = mBluetoothSocket?.isConnected == true
 
     /**
+     * 连接蓝牙 A2dp
+     */
+    fun connectBluetoothA2dp(bluetoothDevice: BluetoothDevice): Boolean = runCatching {
+        val connectMethod = BluetoothA2dp::class.java.getMethod("connect", BluetoothDevice::class.java)
+        connectMethod.isAccessible = true
+        connectMethod.invoke(mBluetoothA2dp, bluetoothDevice) as Boolean
+    }.getOrElse { false }
+
+    /**
      * 发送消息
      */
     fun sendMessage(message: String): Boolean {
@@ -491,26 +580,30 @@ object ClassicBluetoothManager {
         return result
     }
 
-    suspend fun receiveMessage() = flow<String?> {
+    /**
+     * 读取消息
+     */
+    suspend fun readMessage(): String = run {
+        val stringBuilder = StringBuilder()
         runCatching {
             if (isConnectBluetooth()) {
                 mBluetoothSocket?.let {
                     BufferedInputStream(it.inputStream).use { bis ->
                         withContext(Dispatchers.IO) {
-                            val stringBuilder = StringBuilder()
                             val buf = ByteArray(1024)
                             var len: Int
                             while (bis.read().also { len = it } != -1) {
                                 stringBuilder.append(String(buf, 0, len))
                             }
-                            Log.d(TAG, "消息接收成功：$stringBuilder")
-                            emit(stringBuilder.toString())
+                            Log.d(TAG, "消息读取成功：$stringBuilder")
                         }
                     }
                 }
             }
         }.onFailure {
             it.printStackTrace()
+            Log.d(TAG, "消息读取失败")
         }
+        stringBuilder.toString()
     }
 }
