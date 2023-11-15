@@ -379,6 +379,7 @@ object ClassicBluetoothManager {
         onConnectStart()
         CoroutineScope(Dispatchers.IO).launch {
             runCatching {
+                // 未配对，先执行配对
                 if (BluetoothDevice.BOND_BONDED != device.bondState) {
                     val method = device.javaClass.getMethod("createRfcommSocket", Int::class.java)
                     method.isAccessible = true
@@ -393,6 +394,7 @@ object ClassicBluetoothManager {
                     }
                 }
                 withContext(Dispatchers.Main) {
+                    // 连接 A2dp
                     if (connectBluetoothA2dp(device)) {
                         Log.d(TAG, "蓝牙A2dp连接成功：${device.name}")
                         onConnectSuccess(device, mBluetoothSocket)
@@ -499,9 +501,13 @@ object ClassicBluetoothManager {
         lifecycleOwner.lifecycle.addObserver(lifecycleObserver)
     }
 
+    /**
+     * 获取 BluetoothA2dp 对象
+     */
     fun getProfileA2dpProxy(context: Context) = apply {
         mBluetoothAdapter.getProfileProxy(
-            context,
+            /* context = */ context,
+            /* listener = */
             object : BluetoothProfile.ServiceListener {
                 override fun onServiceConnected(profile: Int, proxy: BluetoothProfile?) {
                     Log.d(TAG, "onServiceConnected: $profile, $proxy")
@@ -518,7 +524,7 @@ object ClassicBluetoothManager {
                 }
 
             },
-            BluetoothProfile.A2DP,
+            /* profile = */ BluetoothProfile.A2DP,
         )
     }
 
